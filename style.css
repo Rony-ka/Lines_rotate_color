@@ -2,7 +2,6 @@
 
 html, body {
     margin: 0;
-    margin-top: -5px;
     padding: 0;
     height: 100%;
     width: 100%;
@@ -18,18 +17,10 @@ body {
 }
 
 #grid-container {
-    /*
-     * Columns (Horizontal Spacing for Vertical Lines):
-     * Line thickness (1px) + desired horizontal space (8px) = 9px total column width.
-     */
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(20px, 1fr));
-
-    /*
-     * Rows (Vertical Space: ZERO SPACE, and very large line length):
-     * Line length is 80px. Grid row height is also 80px for zero vertical space.
-     */
-    grid-template-rows: repeat(auto-fill, minmax(45px, 1fr));
+    /* Use 'auto-fit' to allow the grid to fill the available space without gaps */
+    grid-template-columns: repeat(auto-fit, minmax(20px, 1fr));
+    grid-template-rows: repeat(auto-fit, minmax(45px, 1fr));
 
     width: 100vw;
     height: 100vh;
@@ -40,19 +31,9 @@ body {
 }
 
 .line {
-    /* Hover area (the .line div) dimensions (e.g., 100x100px) much larger than new cells */
-    width: 100px; /* Even larger hover area */
-    height: 100px; /* Even larger hover area */
-
-    /*
-     * Negative margins for centering the larger hover area over the NEW, larger grid cells:
-     * Horizontal margins: (100px - 20px [new cell width]) / 2 = 40px
-     * Vertical margins: (100px - 80px [new cell height]) / 2 = 10px
-     */
-    margin-left: -40px;
-    margin-right: -40px;
-    margin-top: -10px;
-    margin-bottom: -10px;
+    /* Set dimensions relative to their grid cell to improve responsiveness */
+    width: 100%;
+    height: 100%;
 
     transform-origin: center center;
     transition: transform 1s ease-out;
@@ -64,35 +45,13 @@ body {
     justify-content: center;
     align-items: center;
 
+    /* The ::before pseudo-element now becomes the actual line */
     &::before {
         content: '';
         background-color: transparent; /* Lines are transparent by default */
-        width: 1px;
-        height: 45px;
+        width: var(--line-width); /* Use CSS variable for width from JS */
+        height: var(--line-height); /* Use CSS variable for height from JS */
+        background-color: var(--line-color); /* Use CSS variable for color from JS */
+        transition: all 0.2s ease-out; /* Add transition for smoothness */
     }
-}
-
-/* New CSS for the color and thickness animation */
-@keyframes color-change {
-    10% {
-        background-color: #F03D2A; /* Start from red */
-    }
-    100% {
-        background-color: #C880FD; /* End at purple */
-    }
-}
-
-@keyframes thickness-change {
-    10% {
-        transform: scaleX(10); /* 10px thickness */
-    }
-    100% {
-        transform: scaleX(1.2); /* 1.2px thickness */
-    }
-}
-
-.line.is-spinning::before {
-    animation: 
-        color-change 2s infinite,
-        thickness-change 2s infinite;
 }
