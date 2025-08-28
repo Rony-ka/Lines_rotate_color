@@ -1,30 +1,19 @@
-// script.js
-
 document.addEventListener('DOMContentLoaded', () => {
     const gridContainer = document.getElementById('grid-container');
 
-    // --- Grid cell dimensions (must match CSS) ---
     const actualGridRowHeight = 45;
     const actualGridColWidth = 20;
-    // --- END Grid cell dimensions ---
 
-    // --- Interaction parameters ---
     const interactionRadius = 100;
     const maxMoveDistance = 40;
-    const lerpFactor = 0.1; // Controls the "lag" or smoothing of the movement
-    // --- END Interaction parameters ---
+    const lerpFactor = 0.1;
 
-    // --- Color parameters ---
     const startColor = { r: 200, g: 128, b: 253 };
     const endColor = { r: 240, g: 61, b: 42 };
-    // --- END Color parameters ---
 
-    // --- New width parameters ---
-    const minWidth = 1.5; // The initial width of the line
-    const maxWidth = 15;  // The maximum width of the line when at the center of the interaction radius
-    // --- END New width parameters ---
+    const minWidth = 1.5;
+    const maxWidth = 15;
 
-    // Change mousePos to a mutable state for touch
     let interactionPoint = { x: null, y: null, active: false };
     let lineElements = [];
 
@@ -44,20 +33,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const populateGrid = () => {
         clearAllLineAnimations();
-
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
-
         const rowsThatFit = Math.floor(viewportHeight / actualGridRowHeight);
         const colsThatFit = Math.floor(viewportWidth / actualGridColWidth);
-
         const numLinesToCreate = rowsThatFit * colsThatFit;
 
         for (let i = 0; i < numLinesToCreate; i++) {
             const line = document.createElement('div');
             line.classList.add('line');
             gridContainer.appendChild(line);
-            // Store the current and target translateX values and width values directly on the element
             line.currentTranslateX = 0;
             line.targetTranslateX = 0;
             line.currentWidth = minWidth;
@@ -73,7 +58,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const lineCenterX = rect.left + rect.width / 2;
             const lineCenterY = rect.top + rect.height / 2;
 
-            // Only animate if there's an active interaction point
             let newTargetTranslateX = 0;
             let newTargetWidth = minWidth;
             let finalColor = 'transparent';
@@ -93,12 +77,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // Interpolate the line's current position and width towards the target
             line.currentTranslateX = lerp(line.currentTranslateX, newTargetTranslateX, lerpFactor);
             line.currentWidth = lerp(line.currentWidth, newTargetWidth, lerpFactor);
 
-            // Apply the new position, color, and width
-            line.style.transform = `translateX(${line.currentTranslateX}px)`;
+            // Corrected: Combine the transforms to avoid overwriting the CSS rotation
+            line.style.transform = `translateX(${line.currentTranslateX}px) rotate(var(--line-rotation))`;
             line.style.setProperty('--line-color', finalColor);
             line.style.setProperty('--line-width', `${line.currentWidth}px`);
         });
@@ -108,13 +91,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Use touch events for mobile compatibility
     window.addEventListener('touchstart', (e) => {
-        // Prevent default browser actions like scrolling or zooming
         e.preventDefault();
         const touch = e.touches[0];
         interactionPoint.x = touch.clientX;
         interactionPoint.y = touch.clientY;
         interactionPoint.active = true;
-    }, { passive: false }); // { passive: false } allows preventDefault to work
+    }, { passive: false });
 
     window.addEventListener('touchmove', (e) => {
         const touch = e.touches[0];
@@ -123,7 +105,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.addEventListener('touchend', () => {
-        // Deactivate the interaction point to return lines to their original state
         interactionPoint.active = false;
         interactionPoint.x = null;
         interactionPoint.y = null;
@@ -136,7 +117,6 @@ document.addEventListener('DOMContentLoaded', () => {
         interactionPoint.active = true;
     });
 
-    // Add mouseleave to reset on desktop when mouse leaves the viewport
     window.addEventListener('mouseleave', () => {
         interactionPoint.active = false;
         interactionPoint.x = null;
