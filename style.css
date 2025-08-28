@@ -92,7 +92,7 @@ body {
 }
 
 .line.is-spinning::before {
-    animation: 
+    animation:
         color-change 2s infinite,
         thickness-change 2s infinite;
 }
