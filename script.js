@@ -3,39 +3,56 @@
 document.addEventListener('DOMContentLoaded', () => {
     const gridContainer = document.getElementById('grid-container');
 
-    // --- CHANGE THESE VALUES to match the NEW updated CSS cell dimensions ---
-    const actualGridRowHeight = 80; // Now 80px (for zero vertical space and 80px line length)
-    const actualGridColWidth = 9;   // Now 9px (1px line + 8px horizontal space)
-    // --- END CHANGE ---
+    // --- Grid cell dimensions (must match CSS) ---
+    const actualGridRowHeight = 45;
+    const actualGridColWidth = 20;
+    // --- END Grid cell dimensions ---
 
-    const spinSpeed = 20000;
-    const easeOutDelay = 2000;
+    // --- Interaction parameters ---
+    const interactionRadius = 100;
+    const maxMoveDistance = 40;
+    const lerpFactor = 0.1; // Controls the "lag" or smoothing of the movement
+    // --- END Interaction parameters ---
 
-    const lineStates = new Map();
-    const lineTimeouts = new Map();
+    // --- Color parameters ---
+    const startColor = { r: 200, g: 128, b: 253 };
+    const endColor = { r: 240, g: 61, g: 42 };
+    // --- END Color parameters ---
 
-    const clearAllLineAnimations = () => {
-        lineStates.forEach(state => {
-            if (state.animationFrameId) {
-                cancelAnimationFrame(state.animationFrameId);
-            }
-            state.isActive = false;
-            state.animationFrameId = null;
-        });
-        lineTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
-        lineTimeouts.clear();
-        lineStates.clear();
+    // --- New width parameters ---
+    const minWidth = 1.5; // The initial width of the line
+    const maxWidth = 15;  // The maximum width of the line when at the center of the interaction radius
+    // --- END New width parameters ---
+
+    let interactionPoint = { x: null, y: null, active: false };
+    let lineElements = [];
+    let animationFrameId = null;
+
+    const lerp = (a, b, t) => a + (b - a) * t;
+
+    const lerpColor = (color1, color2, progress) => {
+        const r = Math.round(lerp(color1.r, color2.r, progress));
+        const g = Math.round(lerp(color1.g, color2.g, progress));
+        const b = Math.round(lerp(color1.b, color2.b, progress));
+        return `rgb(${r}, ${g}, ${b})`;
+    };
+
+    const clearAllLines = () => {
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+        }
+        gridContainer.innerHTML = '';
+        lineElements = [];
     };
 
     const populateGrid = () => {
-        clearAllLineAnimations();
-        gridContainer.innerHTML = '';
+        clearAllLines();
 
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
 
         const rowsThatFit = Math.floor(viewportHeight / actualGridRowHeight);
-        const colsThatFit = Math.ceil(viewportWidth / actualGridColWidth);
+        const colsThatFit = Math.floor(viewportWidth / actualGridColWidth);
 
         const numLinesToCreate = rowsThatFit * colsThatFit;
 
@@ -43,73 +60,99 @@ document.addEventListener('DOMContentLoaded', () => {
             const line = document.createElement('div');
             line.classList.add('line');
             gridContainer.appendChild(line);
+            line.currentTranslateX = 0;
+            line.targetTranslateX = 0;
+            line.currentWidth = minWidth;
+            line.targetWidth = minWidth;
+            lineElements.push(line);
+        }
+        animationFrameId = requestAnimationFrame(animateLines);
+    };
 
-            lineStates.set(line, {
-                currentRotation: 0,
-                isActive: false,
-                animationFrameId: null,
-                lastTime: performance.now()
-            });
+    const animateLines = () => {
+        lineElements.forEach(line => {
+            const rect = line.getBoundingClientRect();
+            const lineCenterX = rect.left + rect.width / 2;
+            const lineCenterY = rect.top + rect.height / 2;
 
-            line.addEventListener('mouseover', () => {
-                if (lineTimeouts.has(line)) {
-                    clearTimeout(lineTimeouts.get(line));
-                    lineTimeouts.delete(line);
+            let newTargetTranslateX = 0;
+            let newTargetWidth = minWidth;
+            let finalColor = 'transparent';
+
+            if (interactionPoint.active) {
+                const dx = interactionPoint.x - lineCenterX;
+                const dy = interactionPoint.y - lineCenterY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < interactionRadius) {
+                    const influence = 1 - (distance / interactionRadius);
+                    const direction = Math.sign(dx);
+                    newTargetTranslateX = -direction * influence * maxMoveDistance;
+                    newTargetWidth = lerp(minWidth, maxWidth, influence);
+                    const movementProgress = Math.abs(newTargetTranslateX) / maxMoveDistance;
+                    finalColor = lerpColor(startColor, endColor, movementProgress);
                 }
+            }
 
-                const state = lineStates.get(line);
-                if (!state.isActive) {
-                    state.isActive = true;
-                    state.lastTime = performance.now();
-                    line.classList.add('is-spinning');
-                    const animateLineSpin = (currentTime) => {
-                        if (!state.isActive) {
-                            line.classList.remove('is-spinning');
-                            state.animationFrameId = null;
-                            return;
-                        }
+            line.currentTranslateX = lerp(line.currentTranslateX, newTargetTranslateX, lerpFactor);
+            line.currentWidth = lerp(line.currentWidth, newTargetWidth, lerpFactor);
 
-                        const deltaTime = currentTime - state.lastTime;
-                        state.currentRotation += (spinSpeed * (deltaTime / 1000));
-                        state.currentRotation %= 360;
+            // Apply the new position, color, and width using a new CSS variable for width
+            line.style.transform = `translateX(${line.currentTranslateX}px)`;
+            line.style.setProperty('--line-color', finalColor);
+            line.style.setProperty('--line-width', `${line.currentWidth}px`);
+        });
 
-                        line.style.setProperty('--line-rotation', `${state.currentRotation}deg`);
-                        line.style.transform = `rotate(${state.currentRotation}deg)`;
-
-                        state.lastTime = currentTime;
-                        state.animationFrameId = requestAnimationFrame(animateLineSpin);
-                    };
-                    state.animationFrameId = requestAnimationFrame(animateLineSpin);
-                }
-            });
-
-            line.addEventListener('mouseout', () => {
-                const state = lineStates.get(line);
-                if (state.isActive) {
-                    state.isActive = false;
-                    if (state.animationFrameId) {
-                        cancelAnimationFrame(state.animationFrameId);
-                        state.animationFrameId = null;
-                    }
-
-                    const timeoutId = setTimeout(() => {
-                        line.style.setProperty('--line-rotation', '0deg');
-                        line.style.transform = `rotate(0deg)`;
-                        lineTimeouts.delete(line);
-                        line.classList.remove('is-spinning');
-                    }, easeOutDelay);
-
-                    lineTimeouts.set(line, timeoutId);
-                }
-            });
+        // Continue the animation loop only if there is an active interaction or animation in progress
+        if (interactionPoint.active || lineElements.some(line => Math.abs(line.currentTranslateX) > 0.01)) {
+            animationFrameId = requestAnimationFrame(animateLines);
+        } else {
+            animationFrameId = null;
         }
     };
+
+    window.addEventListener('touchstart', (e) => {
+        // Prevent default browser actions like scrolling or zooming
+        e.preventDefault();
+        const touch = e.touches[0];
+        interactionPoint.x = touch.clientX;
+        interactionPoint.y = touch.clientY;
+        interactionPoint.active = true;
+        if (!animationFrameId) {
+            animationFrameId = requestAnimationFrame(animateLines);
+        }
+    }, { passive: false });
+
+    window.addEventListener('touchmove', (e) => {
+        const touch = e.touches[0];
+        interactionPoint.x = touch.clientX;
+        interactionPoint.y = touch.clientY;
+    });
+
+    window.addEventListener('touchend', () => {
+        interactionPoint.active = false;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        interactionPoint.x = e.clientX;
+        interactionPoint.y = e.clientY;
+        interactionPoint.active = true;
+        if (!animationFrameId) {
+            animationFrameId = requestAnimationFrame(animateLines);
+        }
+    });
+
+    window.addEventListener('mouseleave', () => {
+        interactionPoint.active = false;
+    });
 
     populateGrid();
 
     let resizeTimeout;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(populateGrid, 200);
+        resizeTimeout = setTimeout(() => {
+            populateGrid();
+        }, 200);
     });
 });
