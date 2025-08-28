@@ -2,6 +2,7 @@
 
 html, body {
     margin: 0;
+    margin-top: -5px;
     padding: 0;
     height: 100%;
     width: 100%;
@@ -17,56 +18,81 @@ body {
 }
 
 #grid-container {
+    /*
+     * Columns (Horizontal Spacing for Vertical Lines):
+     * Line thickness (1px) + desired horizontal space (8px) = 9px total column width.
+     */
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(20px, 1fr));
+
+    /*
+     * Rows (Vertical Space: ZERO SPACE, and very large line length):
+     * Line length is 80px. Grid row height is also 80px for zero vertical space.
+     */
     grid-template-rows: repeat(auto-fill, minmax(45px, 1fr));
+
     width: 100vw;
     height: 100vh;
     box-sizing: border-box;
     padding: 0px;
+
     overflow: hidden;
 }
 
 .line {
-    width: 100px;
-    height: 100px;
+    /* Hover area (the .line div) dimensions (e.g., 100x100px) much larger than new cells */
+    width: 100px; /* Even larger hover area */
+    height: 100px; /* Even larger hover area */
+
+    /*
+     * Negative margins for centering the larger hover area over the NEW, larger grid cells:
+     * Horizontal margins: (100px - 20px [new cell width]) / 2 = 40px
+     * Vertical margins: (100px - 80px [new cell height]) / 2 = 10px
+     */
     margin-left: -40px;
     margin-right: -40px;
     margin-top: -10px;
     margin-bottom: -10px;
-    transform-origin: center center;
-    transition: transform 0.1s linear; /* Shortened transition for better responsiveness */
 
-    /* New CSS variables for dynamic control */
-    --line-color: transparent;
-    --line-width: 1.5px;
-    
+    transform-origin: center center;
+    transition: transform 1s ease-out;
+
+    --line-rotation: 0deg;
+    transform: rotate(var(--line-rotation));
+
     display: flex;
     justify-content: center;
     align-items: center;
 
     &::before {
         content: '';
-        background-color: var(--line-color);
-        width: var(--line-width);
+        background-color: transparent; /* Lines are transparent by default */
+        width: 1px;
         height: 45px;
-        transition: background-color 0.1s linear, width 0.1s linear; /* Smooth transitions for color and width */
     }
 }
 
-/* Remove old hover/animation styles as they are now handled by JS */
-.line:hover::before {
-    /* No longer needed, handled by JS */
-}
-
+/* New CSS for the color and thickness animation */
 @keyframes color-change {
-    /* No longer needed, handled by JS */
+    10% {
+        background-color: #F03D2A; /* Start from red */
+    }
+    100% {
+        background-color: #C880FD; /* End at purple */
+    }
 }
 
 @keyframes thickness-change {
-    /* No longer needed, handled by JS */
+    10% {
+        transform: scaleX(10); /* 10px thickness */
+    }
+    100% {
+        transform: scaleX(1.2); /* 1.2px thickness */
+    }
 }
 
 .line.is-spinning::before {
-    /* No longer needed, handled by JS */
+    animation:
+        color-change 2s infinite,
+        thickness-change 2s infinite;
 }
